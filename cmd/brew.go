@@ -1,32 +1,37 @@
 package cmd
 
 import (
-	"bufio"
 	"embed"
+	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
 
+	"charm.land/huh/v2"
 	"github.com/briandowns/spinner"
 	"github.com/spf13/cobra"
 )
 
 type ProjectData struct {
-	ProjectName   string
-	ProjectRoot   string
-	RepositoryURL string
-	Author        string
+	Name     string
+	RootDir  string
+	RepoURL  string
+	Author   string
+	Database string
 }
 
-var projectData = ProjectData{
-	ProjectName:   "",
-	ProjectRoot:   "",
-	RepositoryURL: "",
-	Author:        "",
+var project = ProjectData{
+	Name:     "",
+	RootDir:  "",
+	RepoURL:  "",
+	Author:   "",
+	Database: "file",
 }
 
 //go:embed templates/*
@@ -50,62 +55,86 @@ var brewCmd = &cobra.Command{
 	Long:  `Brew a new project with the given name. This command will create a new directory with the project name and generate the necessary files for a basic project structure.`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(getRandomBrewMessage())
+		fmt.Printf("%s\n\n", getRandomBrewMessage())
 
-		// Prompt for project name if not provided by argument
-		if len(args) == 1 {
-			projectData.ProjectName = sanitizeProjectName(args[0])
+		if len(args) > 0 {
+			project.Name = args[0]
 		}
-		if projectData.ProjectName == "" {
-			for {
-				err := promptProjectName()
-				if err != nil {
-					fmt.Printf("❌ %v\n", err)
-					continue
-				}
-				break
-			}
+
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Project name:").
+					Value(&project.Name).
+					Validate(func(str string) error {
+						// Check if empty
+						if strings.TrimSpace(str) == "" {
+							return errors.New("Project name can't be empty")
+						}
+						// Check for spaces
+						if strings.Contains(str, " ") {
+							return errors.New("Project name can't contain spaces")
+						}
+						// Check for underscores
+						if strings.Contains(str, "_") {
+							return errors.New("Project name can't contain underscores")
+						}
+						return nil
+					}),
+				huh.NewInput().
+					Title("Repository URL (e.g., github.com/username/repo):").
+					Value(&project.RepoURL).
+					Validate(func(str string) error {
+						// Check for spaces
+						if strings.Contains(str, " ") {
+							return errors.New("Repository URL can't contain spaces")
+						}
+						// Check for http:// or https://
+						if strings.HasPrefix(str, "http://") || strings.HasPrefix(str, "https://") {
+							return errors.New("Repository URL can't contain http:// or https://")
+						}
+						return nil
+					}),
+				huh.NewInput().
+					Title("Author name (e.g., John Doe <john.doe@example.com>):").
+					Value(&project.Author).
+					Validate(func(str string) error {
+						// If author name is provided, enforce the format "Name <email>" via regex
+						if strings.TrimSpace(str) != "" {
+							pattern := `^[^<>]+ <[^@\s]+@[^@\s]+\.[^@\s]+>$`
+							matched, err := regexp.MatchString(pattern, str)
+							if err != nil || !matched {
+								return errors.New("Author must be in format: Name <email@domain.com>")
+							}
+						}
+						return nil
+					}),
+				huh.NewSelect[string]().
+					Title("Database").
+					Options(
+						huh.NewOption("Flat File", "file"),
+						huh.NewOption("Microsoft SQL", "mssql"),
+						huh.NewOption("PostgreSQL", "postgres"),
+					).
+					Value(&project.Database),
+			),
+		)
+
+		err := form.Run()
+		if err != nil {
+			log.Fatal(err)
 		}
 
 		// Get current working directory
 		cwd, err := os.Getwd()
 		if err != nil {
-			fmt.Printf("❌ Failed to get current working directory: %v\n", err)
-			os.Exit(1)
+			log.Fatalf("❌ Failed to get current working directory: %v\n", err)
 		}
-		projectData.ProjectRoot = filepath.Join(cwd, projectData.ProjectName)
+		project.RootDir = filepath.Join(cwd, project.Name)
 
 		// Early return if project directory already exists
-		if _, err := os.Stat(projectData.ProjectRoot); !os.IsNotExist(err) {
-			fmt.Printf("❌ Directory '%s' already exists\n", projectData.ProjectRoot)
-			os.Exit(1)
-		}
-
-		// Prompt for repository URL if not provided by flag
-		if projectData.RepositoryURL != "" {
-			projectData.RepositoryURL = sanitizeRepositoryURL(projectData.RepositoryURL)
-		}
-		if projectData.RepositoryURL == "" {
-			err := promptRepositoryURL()
-			if err != nil {
-				fmt.Printf("❌ Invalid repository URL: %v\n", err)
-			}
-		}
-
-		// Use default repository URL if not provided by user
-		if projectData.RepositoryURL == "" {
-			projectData.RepositoryURL = fmt.Sprintf("github.com/username/%s", projectData.ProjectName)
-		}
-
-		// Prompt for author name if not provided by flag
-		if projectData.Author != "" {
-			projectData.Author = sanitizeAuthorName(projectData.Author)
-		}
-		if projectData.Author == "" {
-			err := promptAuthorName()
-			if err != nil {
-				fmt.Printf("❌ Invalid author name: %v\n", err)
-			}
+		if _, err := os.Stat(project.RootDir); !os.IsNotExist(err) {
+			log.Fatalf("❌ Directory '%s' already exists\n", project.RootDir)
 		}
 
 		// Start brewing spinner
@@ -116,84 +145,29 @@ var brewCmd = &cobra.Command{
 		// Prepare project data for templating
 		err = scaffoldProject()
 		if err != nil {
-			s.Stop()
-			fmt.Printf("❌ Failed to brew project\n\n%v\n", err)
-			os.Exit(1)
+			log.Fatalf("❌ Failed to brew project\n\n%v\n", err)
 		}
 
 		// Simulate scaffolding work
 		time.Sleep(2 * time.Second)
 
 		s.Stop()
-		fmt.Printf("\n✅ '%s' has finished brewing!\n\n", projectData.ProjectName)
+		fmt.Printf("\n✅ '%s' has finished brewing!\n\n", project.Name)
 
 		// Print project details
-		fmt.Printf("Directory: %s\n", projectData.ProjectRoot)
-		fmt.Printf("Repository: https://%s\n", projectData.RepositoryURL)
-		if projectData.Author != "" {
-			fmt.Printf("Author: %s\n", projectData.Author)
+		fmt.Printf("Directory: %s\n", project.RootDir)
+		fmt.Printf("Repository: https://%s\n", project.RepoURL)
+		if project.Author != "" {
+			fmt.Printf("Author: %s\n", project.Author)
 		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(brewCmd)
-	brewCmd.Flags().StringVarP(&projectData.RepositoryURL, "repo", "r", "", "Repository URL (e.g., github.com/username/repo)")
-	brewCmd.Flags().StringVarP(&projectData.Author, "author", "a", "", "Author name")
-}
-
-func sanitizeProjectName(name string) string {
-	name = strings.ReplaceAll(name, " ", "-")
-	name = strings.TrimSpace(name)
-	return name
-}
-
-func sanitizeRepositoryURL(url string) string {
-	url = strings.TrimSpace(url)
-	// Remove protocol if user accidentally included it
-	url = strings.TrimPrefix(url, "http://")
-	url = strings.TrimPrefix(url, "https://")
-	return url
-}
-
-func sanitizeAuthorName(name string) string {
-	return strings.TrimSpace(name)
-}
-
-func promptProjectName() error {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter project name: ")
-	projectName, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("failed to read input: %w", err)
-	}
-	projectData.ProjectName = sanitizeProjectName(projectName)
-	if projectData.ProjectName == "" {
-		return fmt.Errorf("project name cannot be empty")
-	}
-	return nil
-}
-
-func promptRepositoryURL() error {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter repository URL (e.g., github.com/username/repo): ")
-	repositoryURL, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("failed to read input: %w", err)
-	}
-	projectData.RepositoryURL = sanitizeRepositoryURL(repositoryURL)
-	return nil
-}
-
-func promptAuthorName() error {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter author name (e.g., John Doe <john.doe@example.com>): ")
-	author, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("failed to read input: %w", err)
-	}
-	projectData.Author = sanitizeAuthorName(author)
-	return nil
+	brewCmd.Flags().StringVarP(&project.RepoURL, "repo", "r", "", "Repository URL (e.g., github.com/username/repo)")
+	brewCmd.Flags().StringVarP(&project.Author, "author", "a", "", "Author name")
+	brewCmd.Flags().StringVarP(&project.Database, "database", "d", "", "Database type (\"file\", \"mssql\", \"postgres\")")
 }
 
 func scaffoldProject() error {
@@ -218,7 +192,7 @@ func scaffoldProject() error {
 }
 
 func createProjectRoot() error {
-	projectRoot := projectData.ProjectRoot
+	projectRoot := project.RootDir
 
 	// Create project directory
 	err := os.Mkdir(projectRoot, 0755)
@@ -236,7 +210,7 @@ func createProjectRoot() error {
 
 func createBackend() error {
 	// Create backend directory
-	backendPath := filepath.Join(projectData.ProjectRoot, "backend")
+	backendPath := filepath.Join(project.RootDir, "backend")
 	err := os.Mkdir(backendPath, 0755)
 	if err != nil {
 		return err
@@ -261,7 +235,7 @@ func createBackend() error {
 
 func createFrontend() error {
 	// Create frontend directory
-	frontendPath := filepath.Join(projectData.ProjectRoot, "frontend")
+	frontendPath := filepath.Join(project.RootDir, "frontend")
 	err := os.Mkdir(frontendPath, 0755)
 	if err != nil {
 		return err
@@ -282,12 +256,12 @@ func createFrontend() error {
 	}{
 		// Public directory static files
 		{"templates/frontend/public/favicon.svg", filepath.Join(frontendPath, "public", "favicon.svg")},
-		{"templates/frontend/public/icons.svg", filepath.Join(frontendPath, "public", "icons.svg")},
+		{"templates/frontend/public/khajit.webp", filepath.Join(frontendPath, "public", "khajit.webp")},
 
 		// Source directory static files
-		{"templates/frontend/src/assets/hero.png", filepath.Join(frontendPath, "src", "assets", "hero.png")},
-		{"templates/frontend/src/assets/react.svg", filepath.Join(frontendPath, "src", "assets", "react.svg")},
-		{"templates/frontend/src/assets/vite.svg", filepath.Join(frontendPath, "src", "assets", "vite.svg")},
+		// {"templates/frontend/src/assets/hero.png", filepath.Join(frontendPath, "src", "assets", "hero.png")},
+		// {"templates/frontend/src/assets/react.svg", filepath.Join(frontendPath, "src", "assets", "react.svg")},
+		// {"templates/frontend/src/assets/vite.svg", filepath.Join(frontendPath, "src", "assets", "vite.svg")},
 	}
 	for _, file := range staticFiles {
 		if err := copyFile(file.src, file.dst); err != nil {
@@ -361,5 +335,5 @@ func processTemplate(templatePath, outputPath string) error {
 	defer outputFile.Close()
 
 	// Execute template with data
-	return tmpl.Execute(outputFile, projectData)
+	return tmpl.Execute(outputFile, project)
 }

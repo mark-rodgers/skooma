@@ -1,7 +1,7 @@
 ifeq ($(OS),Windows_NT)
-	BINARY_NAME={{.ProjectName}}.exe
+	BINARY_NAME={{.Name}}.exe
 else
-	BINARY_NAME={{.ProjectName}}
+	BINARY_NAME={{.Name}}
 endif
 
 # Build the backend binary

@@ -21,7 +21,7 @@ func main() {
 	r.GET("/healthh", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status": "ok",
-			"service": "{{.ProjectName}}-backend",
+			"service": "{{.Name}}-backend",
 		})
 	})
 
@@ -31,6 +31,6 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Starting {{.ProjectName}} backend server on port %s", port)
+	log.Printf("Starting {{.Name}} backend server on port %s", port)
 	r.Run(":" + port)
 }
