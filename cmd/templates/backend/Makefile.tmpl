@@ -1,0 +1,10 @@
+ifeq ($(OS),Windows_NT)
+	BINARY_NAME={{.ProjectName}}.exe
+else
+	BINARY_NAME={{.ProjectName}}
+endif
+
+# Build the backend binary
+build:
+	go mod tidy
+	go build -o bin/${BINARY_NAME} cmd/main.go

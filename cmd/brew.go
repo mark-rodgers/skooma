@@ -197,6 +197,7 @@ func promptAuthorName() error {
 }
 
 func scaffoldProject() error {
+	// Create project root directory and root-level files
 	err := createProjectRoot()
 	if err != nil {
 		return fmt.Errorf("failed to brew project: %w", err)
@@ -234,6 +235,7 @@ func createProjectRoot() error {
 }
 
 func createBackend() error {
+	// Create backend directory
 	backendPath := filepath.Join(projectData.ProjectRoot, "backend")
 	err := os.Mkdir(backendPath, 0755)
 	if err != nil {
@@ -246,6 +248,7 @@ func createBackend() error {
 	}{
 		{"templates/backend/go.mod.tmpl", filepath.Join(backendPath, "go.mod")},
 		{"templates/backend/main.go.tmpl", filepath.Join(backendPath, "main.go")},
+		{"templates/backend/Makefile.tmpl", filepath.Join(backendPath, "Makefile")},
 	}
 
 	for _, tmpl := range templates {
@@ -257,23 +260,82 @@ func createBackend() error {
 }
 
 func createFrontend() error {
+	// Create frontend directory
 	frontendPath := filepath.Join(projectData.ProjectRoot, "frontend")
 	err := os.Mkdir(frontendPath, 0755)
 	if err != nil {
 		return err
 	}
 
+	// Create frontend subdirectories
+	subdirs := []string{"src", "src/assets", "public"}
+	for _, subdir := range subdirs {
+		err := os.Mkdir(filepath.Join(frontendPath, subdir), 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Copy static asset files that don't require templating
+	staticFiles := []struct {
+		src, dst string
+	}{
+		// Public directory static files
+		{"templates/frontend/public/favicon.svg", filepath.Join(frontendPath, "public", "favicon.svg")},
+		{"templates/frontend/public/icons.svg", filepath.Join(frontendPath, "public", "icons.svg")},
+
+		// Source directory static files
+		{"templates/frontend/src/assets/hero.png", filepath.Join(frontendPath, "src", "assets", "hero.png")},
+		{"templates/frontend/src/assets/react.svg", filepath.Join(frontendPath, "src", "assets", "react.svg")},
+		{"templates/frontend/src/assets/vite.svg", filepath.Join(frontendPath, "src", "assets", "vite.svg")},
+	}
+	for _, file := range staticFiles {
+		if err := copyFile(file.src, file.dst); err != nil {
+			return err
+		}
+	}
+
 	// Process frontend templates
 	templates := []struct {
 		src, dst string
 	}{
+		// Root-level frontend templates
+		{"templates/frontend/gitignore.tmpl", filepath.Join(frontendPath, ".gitignore")},
+		{"templates/frontend/eslint.config.js.tmpl", filepath.Join(frontendPath, "eslint.config.js")},
+		{"templates/frontend/index.html.tmpl", filepath.Join(frontendPath, "index.html")},
 		{"templates/frontend/package.json.tmpl", filepath.Join(frontendPath, "package.json")},
+		{"templates/frontend/README.md.tmpl", filepath.Join(frontendPath, "README.md")},
+		{"templates/frontend/tsconfig.json.tmpl", filepath.Join(frontendPath, "tsconfig.json")},
+		{"templates/frontend/tsconfig.app.json.tmpl", filepath.Join(frontendPath, "tsconfig.app.json")},
+		{"templates/frontend/tsconfig.node.json.tmpl", filepath.Join(frontendPath, "tsconfig.node.json")},
+		{"templates/frontend/vite.config.ts.tmpl", filepath.Join(frontendPath, "vite.config.ts")},
+
+		// Source directory templates
+		{"templates/frontend/src/App.css.tmpl", filepath.Join(frontendPath, "src", "App.css")},
+		{"templates/frontend/src/App.tsx.tmpl", filepath.Join(frontendPath, "src", "App.tsx")},
+		{"templates/frontend/src/index.css.tmpl", filepath.Join(frontendPath, "src", "index.css")},
+		{"templates/frontend/src/main.tsx.tmpl", filepath.Join(frontendPath, "src", "main.tsx")},
 	}
 
 	for _, tmpl := range templates {
 		if err := processTemplate(tmpl.src, tmpl.dst); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	// Read file content from embedded filesystem
+	content, err := templateFS.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("failed to read file %s: %w", src, err)
+	}
+
+	// Write content to destination path
+	err = os.WriteFile(dst, content, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write file %s: %w", dst, err)
 	}
 	return nil
 }
