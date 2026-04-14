@@ -15,9 +15,10 @@ import (
 
 // templateCmd represents the template command
 var templateCmd = &cobra.Command{
-	Use:   "template",
-	Short: "Manage Skooma templates",
-	Long:  `Manage Skooma templates, which are used to scaffold projects with the brew command. You can list, create, add, and remove templates.`,
+	Use:     "template",
+	Short:   "Manage Skooma templates",
+	Long:    `Manage Skooma templates, which are used to scaffold projects with the brew command. You can list, create, add, and remove templates.`,
+	Aliases: []string{"tpl"},
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
