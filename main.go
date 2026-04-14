@@ -1,9 +1,23 @@
 // CLI to scaffold fullstack SPAs with Go, TypeScript, React, Tailwind, and Vite.
 package main
 
-import "github.com/mark-rodgers/skooma/cmd"
+import (
+	"os"
+
+	"github.com/mark-rodgers/skooma/cmd"
+	"github.com/mark-rodgers/skooma/internal/config"
+)
+
+var version = "0.1.0-dev"
 
 // main is the entry point for the CLI application.
 func main() {
+	os.Setenv("SKOOMA_VERSION", version)
+
+	_, err := config.GetConfig()
+	if err != nil {
+		panic(err)
+	}
+
 	cmd.Execute()
 }
