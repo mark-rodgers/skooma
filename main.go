@@ -14,6 +14,7 @@ var version = "0.1.0-dev"
 func main() {
 	os.Setenv("SKOOMA_VERSION", version)
 
+	// Load config to ensure it exists and is valid before executing any commands
 	_, err := config.GetConfig()
 	if err != nil {
 		panic(err)
