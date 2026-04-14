@@ -1,9 +1,3 @@
-// brew.go defines the "brew" command for the Skooma CLI, which scaffolds a new
-// fullstack project with Go, TypeScript, React, Tailwind, and Vite.
-// It collects user input for project details, creates the necessary directory
-// structure, and generates files based on embedded templates. The command also
-// includes a fun brewing message and a spinner to enhance the user experience
-// while the project is being set up.
 package cmd
 
 import (
@@ -21,24 +15,30 @@ import (
 
 	"charm.land/huh/v2"
 	"github.com/briandowns/spinner"
+	"github.com/mark-rodgers/skooma/internal/templates"
+	"github.com/mark-rodgers/skooma/internal/types"
 	"github.com/spf13/cobra"
 )
 
 // ProjectData holds the data collected from the user to populate the project templates.
 type ProjectData struct {
-	Name     string
-	RootDir  string
-	RepoURL  string
-	Author   string
-	Database string
+	Name         string
+	RootDir      string
+	TemplateName string
+	Template     types.Template
+	Database     string
+	RepoURL      string
+	Author       string
 }
 
 var project = ProjectData{
-	Name:     "",
-	RootDir:  "",
-	RepoURL:  "",
-	Author:   "",
-	Database: "file",
+	Name:         "",
+	RootDir:      "",
+	TemplateName: "",
+	Template:     types.Template{},
+	Database:     "file",
+	RepoURL:      "",
+	Author:       "",
 }
 
 //go:embed templates/*
@@ -58,15 +58,29 @@ func getRandomBrewMessage() string {
 }
 
 var brewCmd = &cobra.Command{
-	Use:   "brew <project_name>",
+	Use:   "brew PROJECT_NAME",
 	Short: "Brew a new project",
-	Long:  `Brew a new project with the given name. This command will create a new directory with the project name and generate the necessary files for a basic project structure.`,
-	Args:  cobra.MaximumNArgs(1),
+	Long: `Brew a new project with the given name.
+This command will create a new directory with the project name and generate
+the necessary files for a basic project structure.`,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s\n\n", getRandomBrewMessage())
 
 		if len(args) > 0 {
 			project.Name = args[0]
+		}
+
+		templates, err := templates.GetTemplates()
+		if err != nil {
+			fmt.Printf("Error loading templates: %v\n", err)
+			return
+		}
+
+		// Build template options dynamically
+		templateOptions := make([]huh.Option[string], 0, len(templates))
+		for name, tmpl := range templates {
+			templateOptions = append(templateOptions, huh.NewOption(name+" - "+tmpl.Description, name))
 		}
 
 		form := huh.NewForm(
@@ -89,6 +103,10 @@ var brewCmd = &cobra.Command{
 						}
 						return nil
 					}),
+				huh.NewSelect[string]().
+					Title("Template").
+					Options(templateOptions...).
+					Value(&project.TemplateName),
 				huh.NewInput().
 					Title("Repository URL (e.g., github.com/username/repo):").
 					Value(&project.RepoURL).
@@ -128,10 +146,13 @@ var brewCmd = &cobra.Command{
 			),
 		)
 
-		err := form.Run()
+		err = form.Run()
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// Get the selected template object
+		project.Template = templates[project.TemplateName]
 
 		// Get current working directory
 		cwd, err := os.Getwd()
@@ -174,9 +195,10 @@ var brewCmd = &cobra.Command{
 // init registers the brew command and its flags with the root command.
 func init() {
 	rootCmd.AddCommand(brewCmd)
+	brewCmd.Flags().StringVarP(&project.TemplateName, "template", "t", "", "Template name")
+	brewCmd.Flags().StringVarP(&project.Database, "database", "d", "", "Database type (\"file\", \"mssql\", \"postgres\")")
 	brewCmd.Flags().StringVarP(&project.RepoURL, "repo", "r", "", "Repository URL (e.g., github.com/username/repo)")
 	brewCmd.Flags().StringVarP(&project.Author, "author", "a", "", "Author name")
-	brewCmd.Flags().StringVarP(&project.Database, "database", "d", "", "Database type (\"file\", \"mssql\", \"postgres\")")
 }
 
 // scaffoldProject creates the project directory structure and generates files based on templates.

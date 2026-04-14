@@ -7,19 +7,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	"github.com/mark-rodgers/skooma/internal/types"
 )
-
-// Template represents a project template
-type Template struct {
-	Description string `json:"description"`
-	Repo        string `json:"repo"`
-	Author      string `json:"author"`
-}
-
-// Config represents the Skooma configuration
-type Config struct {
-	Templates map[string]Template `json:"templates"`
-}
 
 // GetConfigPath returns the path to the Skooma config file, creating it with default config if it doesn't exist
 func GetConfigPath() (string, error) {
@@ -41,8 +31,8 @@ func GetConfigPath() (string, error) {
 	configPath := filepath.Join(skoomaDir, "config.json")
 	if _, err := os.Stat(configPath); err != nil {
 		// File doesn't exist, create it with default config
-		defaultConfig := &Config{
-			Templates: map[string]Template{
+		defaultConfig := &types.Config{
+			Templates: map[string]types.Template{
 				"default": {
 					Description: "A default template with Go, React, Tailwind, and Vite",
 					Repo:        "github.com/mark-rodgers/skooma-default-template",
@@ -72,7 +62,7 @@ func GetConfigPath() (string, error) {
 }
 
 // GetConfig retrieves the config object from the config file
-func GetConfig() (*Config, error) {
+func GetConfig() (*types.Config, error) {
 	configPath, err := GetConfigPath()
 	if err != nil {
 		return nil, err
@@ -83,13 +73,37 @@ func GetConfig() (*Config, error) {
 		return nil, err
 	}
 
-	var config Config
+	var config types.Config
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		return nil, err
 	}
 
 	return &config, nil
+}
+
+func SaveConfig(config *types.Config) error {
+	configPath, err := GetConfigPath()
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(configPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "\t")
+	encoder.SetEscapeHTML(false)
+
+	err = encoder.Encode(config)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func Open() error {
