@@ -1,4 +1,4 @@
-.PHONY: build clean
+.PHONY: build clean install
 
 OS := $(shell go env GOOS)
 ifeq ($(OS),windows)
@@ -9,6 +9,9 @@ endif
 
 build:
 	go build -o $(OUTPUT)
+
+install:
+	go install .
 
 clean:
 ifeq ($(OS),windows)
