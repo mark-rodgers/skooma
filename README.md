@@ -6,25 +6,84 @@
 
 > _"Khajiit has wares, if you have a project name."_
 
-Skooma is a CLI tool that scaffolds full-stack single-page applications in seconds. One command gives you a Go/Gin backend, a React + TypeScript + Vite + Tailwind CSS frontend, and a `docker-compose.yml` — all wired together and ready to run. Named after the famously suspicious substance from Elder Scrolls lore, because good scaffolding tools should feel a little magical.
+Skooma is a flexible CLI tool that scaffolds full-stack single-page applications in seconds using external template repositories. One command sets up your entire development environment with backend, frontend, and infrastructure — all wired together and ready to run. Named after the famously suspicious substance from Elder Scrolls lore, because good scaffolding tools should feel a little magical.
 
 ---
 
 ## What Gets Brewed
 
-Running `skooma brew` conjures the following stack:
+Running `skooma brew` creates a complete project structure based on your chosen template. Templates define what gets generated - from simple static sites to complex multi-service applications:
 
-| Layer              | Tech                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| **Backend**        | Go + [Gin](https://github.com/gin-gonic/gin) + [godotenv](https://github.com/joho/godotenv) |
-| **Frontend**       | React 19 + TypeScript + Vite + Tailwind CSS + ESLint                                        |
-| **Infrastructure** | Docker Compose (backend, frontend, and database services)                                   |
+| Template Defines   | What You Get                                       |
+| ------------------ | -------------------------------------------------- |
+| **Project Files**  | Source code, configuration, and build scripts      |
+| **Dependencies**   | Package definitions and dependency management      |
+| **Tooling**        | Development workflows, linting, and testing setup  |
+| **Infrastructure** | Deployment configuration and service orchestration |
+| **Variables**      | Custom prompts and inputs collected during a brew  |
+
+---
+
+## Templates
+
+Skooma uses external template repositories to generate projects, allowing for flexible and community-driven project scaffolding. Templates are git repositories containing `.tmpl` files that get processed and customized for each new project.
+
+### Default Template
+
+The [skooma-template-default](https://github.com/mark-rodgers/skooma-template-default) provides a full-stack web application setup with:
+
+- **Frontend**: React with TypeScript, Vite build tooling, Tailwind CSS styling, and ESLint
+- **Backend**: Go with Gin web framework and environment configuration
+- **Infrastructure**: Docker Compose orchestration with database services
+- **Database Options**: PostgreSQL, Microsoft SQL Server, or flat file storage
+
+See the template repository for specific versions, detailed setup instructions, and customization options.
+
+### Template Management
+
+Templates can be managed through the Skooma configuration:
+
+```bash
+# List available templates
+skooma template ls
+
+# Add a custom template repository
+skooma template add my-template github.com/user/skooma-template-custom
+
+# Remove a template
+skooma template rm my-template
+
+# Use a specific template
+skooma brew my-app --template my-template
+```
+
+### Creating Custom Templates
+
+Want to create your own template? Templates are git repositories with:
+
+1. **Configuration file** (`skooma.config.json`) defining available variables and prompts
+2. **Template files** ending in `.tmpl` (e.g., `index.html.tmpl`)
+3. **Template variables** using Go's [text/template](https://pkg.go.dev/text/template) syntax
+
+Template variables are dynamically defined by each template's `skooma.config.json` file. When brewing a project, Skooma will prompt for all variables defined in the template's configuration, then process all `.tmpl` files using Go's templating engine.
+
+See the [default template](https://github.com/mark-rodgers/skooma-template-default) repository for a complete example.
 
 ---
 
 ## Installation
 
-**Prerequisites:** Go 1.26.1+, `make`, Git
+**Prerequisites:** Go 1.26.1+
+
+### Quick Install
+
+```bash
+go install github.com/mark-rodgers/skooma@latest
+```
+
+### Build from Source
+
+If you want to hack on Skooma or build a specific version:
 
 ```bash
 git clone https://github.com/mark-rodgers/skooma.git
@@ -40,16 +99,17 @@ This produces a binary at `bin/skooma` (or `bin/skooma.exe` on Windows). Add it 
 
 ### Interactive mode
 
-Run `brew` with just a project name (or no arguments at all). Skooma will walk you through a TUI form asking for the remaining details.
+Run `brew` with just a project name (or no arguments at all). Skooma will walk you through a TUI form asking for the remaining details, including template selection.
 
 ```bash
-skooma brew myapp
+skooma brew my-app
 ```
 
 You'll be prompted for:
 
-- **Project name**
-- **Repository URL** — e.g. `github.com/user/myapp`
+- **Project name** — Alphanumeric, no spaces or underscores
+- **Template** — Choose from available template repositories
+- **Repository URL** — e.g. `github.com/user/repo`
 - **Author** — e.g. `Name <email@example.com>`
 - **Database** — Flat File, Microsoft SQL, or PostgreSQL
 
@@ -58,8 +118,9 @@ You'll be prompted for:
 Pass all flags upfront to skip the form entirely — useful for scripts and automation.
 
 ```bash
-skooma brew myapp \
-  --repo github.com/you/myapp \
+skooma brew my-app \
+  --template default \
+  --repo github.com/user/repo \
   --author "Jane Doe <jane@example.com>" \
   --database postgres
 ```
@@ -68,67 +129,21 @@ skooma brew myapp \
 
 | Flag         | Short | Description                                    | Default      |
 | ------------ | ----- | ---------------------------------------------- | ------------ |
-| `--repo`     | `-r`  | Repository URL (e.g. `github.com/you/myapp`)   | _(prompted)_ |
+| `--template` | `-t`  | Template name from configured templates        | _(prompted)_ |
+| `--repo`     | `-r`  | Repository URL (e.g. `github.com/user/repo`)   | _(prompted)_ |
 | `--author`   | `-a`  | Author name and email in `Name <email>` format | _(optional)_ |
 | `--database` | `-d`  | Database type: `file`, `mssql`, or `postgres`  | `file`       |
 
 ---
 
-## Generated Project Structure
+## Related Projects
 
-After running `skooma brew myapp`, you'll find a `myapp/` directory with the following layout:
+- **[Skooma Default Template](https://github.com/mark-rodgers/skooma-template-default)** - The official default template
+- **[Template Gallery](https://github.com/topics/skooma-template)** - Community templates and examples
 
-```
-myapp/
-├── docker-compose.yml
-├── backend/
-│   ├── go.mod
-│   ├── main.go
-│   └── Makefile
-└── frontend/
-    ├── index.html
-    ├── package.json
-    ├── vite.config.ts
-    ├── tsconfig.json
-    ├── tsconfig.app.json
-    ├── tsconfig.node.json
-    ├── eslint.config.js
-    ├── .gitignore
-    ├── public/
-    └── src/
-        ├── main.tsx
-        ├── App.tsx
-        ├── App.css
-        └── index.css
-```
+## License
 
----
-
-## Database Options
-
-The `--database` flag controls what database service gets configured in `docker-compose.yml` and wired into your backend.
-
-| Value      | Description                                                                                      |
-| ---------- | ------------------------------------------------------------------------------------------------ |
-| `file`     | Flat file storage — no database container, no extra dependencies. Good for getting started fast. |
-| `mssql`    | Microsoft SQL Server container.                                                                  |
-| `postgres` | PostgreSQL container. The default in generated `docker-compose.yml` examples.                    |
-
----
-
-## Building Skooma
-
-If you're hacking on Skooma itself:
-
-```bash
-# Build the binary
-make build
-
-# Clean build artifacts
-make clean
-```
-
-The output binary lands in `bin/`.
+MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
