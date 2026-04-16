@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/mark-rodgers/skooma/internal/types"
+	"github.com/skooma-cli/skooma/internal/types"
 )
 
 // GetConfigPath returns the path to the Skooma config file, creating it with default config if it doesn't exist
@@ -35,7 +35,7 @@ func GetConfigPath() (string, error) {
 			Templates: map[string]types.Template{
 				"default": {
 					Description: "A default template with Go, React, Tailwind, and Vite",
-					Repo:        "github.com/mark-rodgers/skooma-default-template",
+					Repo:        "github.com/skooma-cli/skooma-default-template",
 					Author:      "Mark Rodgers <mark@marknrodgers.com>",
 				},
 			},

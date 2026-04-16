@@ -1,8 +1,8 @@
 package templates
 
 import (
-	"github.com/mark-rodgers/skooma/internal/config"
-	"github.com/mark-rodgers/skooma/internal/types"
+	"github.com/skooma-cli/skooma/internal/config"
+	"github.com/skooma-cli/skooma/internal/types"
 )
 
 func GetTemplates() (map[string]types.Template, error) {

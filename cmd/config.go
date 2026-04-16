@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/mark-rodgers/skooma/internal/config"
+	"github.com/skooma-cli/skooma/internal/config"
 	"github.com/spf13/cobra"
 )
 

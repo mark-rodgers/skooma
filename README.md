@@ -30,7 +30,7 @@ Skooma uses external template repositories to generate projects, allowing for fl
 
 ### Default Template
 
-The [skooma-template-default](https://github.com/mark-rodgers/skooma-template-default) provides a full-stack web application setup with:
+The [skooma-template-default](https://github.com/skooma-cli/skooma-template-default) provides a full-stack web application setup with:
 
 - **Frontend**: React with TypeScript, Vite build tooling, Tailwind CSS styling, and ESLint
 - **Backend**: Go with Gin web framework and environment configuration
@@ -67,7 +67,7 @@ Want to create your own template? Templates are git repositories with:
 
 Template variables are dynamically defined by each template's `skooma.config.json` file. When brewing a project, Skooma will prompt for all variables defined in the template's configuration, then process all `.tmpl` files using Go's templating engine.
 
-See the [default template](https://github.com/mark-rodgers/skooma-template-default) repository for a complete example.
+See the [default template](https://github.com/skooma-cli/skooma-template-default) repository for a complete example.
 
 ---
 
@@ -78,7 +78,7 @@ See the [default template](https://github.com/mark-rodgers/skooma-template-defau
 ### Quick Install
 
 ```bash
-go install github.com/mark-rodgers/skooma@latest
+go install github.com/skooma-cli/skooma@latest
 ```
 
 ### Build from Source
@@ -86,7 +86,7 @@ go install github.com/mark-rodgers/skooma@latest
 If you want to hack on Skooma or build a specific version:
 
 ```bash
-git clone https://github.com/mark-rodgers/skooma.git
+git clone https://github.com/skooma-cli/skooma.git
 cd skooma
 make build
 ```
@@ -138,7 +138,7 @@ skooma brew my-app \
 
 ## Related Projects
 
-- **[Skooma Default Template](https://github.com/mark-rodgers/skooma-template-default)** - The official default template
+- **[Skooma Default Template](https://github.com/skooma-cli/skooma-template-default)** - The official default template
 - **[Template Gallery](https://github.com/topics/skooma-template)** - Community templates and examples
 
 ## License

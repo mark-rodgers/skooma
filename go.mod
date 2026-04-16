@@ -1,4 +1,4 @@
-module github.com/mark-rodgers/skooma
+module github.com/skooma-cli/skooma
 
 go 1.26.1
 

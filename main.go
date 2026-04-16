@@ -4,8 +4,8 @@ package main
 import (
 	"os"
 
-	"github.com/mark-rodgers/skooma/cmd"
-	"github.com/mark-rodgers/skooma/internal/config"
+	"github.com/skooma-cli/skooma/cmd"
+	"github.com/skooma-cli/skooma/internal/config"
 )
 
 var version = "0.1.0-dev"

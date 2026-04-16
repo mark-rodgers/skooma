@@ -15,8 +15,8 @@ import (
 
 	"charm.land/huh/v2"
 	"github.com/briandowns/spinner"
-	"github.com/mark-rodgers/skooma/internal/templates"
-	"github.com/mark-rodgers/skooma/internal/types"
+	"github.com/skooma-cli/skooma/internal/templates"
+	"github.com/skooma-cli/skooma/internal/types"
 	"github.com/spf13/cobra"
 )
 
