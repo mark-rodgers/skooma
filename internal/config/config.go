@@ -27,13 +27,15 @@ func GetConfigPath() (string, error) {
 		}
 	}
 
-	// If config file exists, return its filepath
+	// If config file doesn't exist, create the default config
 	configPath := filepath.Join(skoomaDir, "config.json")
 	if _, err := os.Stat(configPath); err != nil {
 		// File doesn't exist, create it with default config
+		// TODO: storing the name in the key is redundant, but it makes the TUI easier to build for now. We can refactor later if needed.
 		defaultConfig := &types.Config{
 			Templates: map[string]types.Template{
 				"default": {
+					Name:        "default",
 					Description: "A default template with Go, React, Tailwind, and Vite",
 					Author:      "Mark Rodgers <mark@marknrodgers.com>",
 					RepoURL:     "github.com/skooma-cli/skooma-default-template",

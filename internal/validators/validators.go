@@ -14,7 +14,7 @@ import (
 func NotEmpty(label string) func(string) error {
 	return func(str string) error {
 		if strings.TrimSpace(str) == "" {
-			return errors.New(label + " can't be empty")
+			return errors.New(strings.ToLower(label) + " can't be empty")
 		}
 		return nil
 	}
@@ -24,7 +24,7 @@ func NotEmpty(label string) func(string) error {
 func NoSpaces(label string) func(string) error {
 	return func(str string) error {
 		if strings.Contains(str, " ") {
-			return errors.New(label + " can't contain spaces")
+			return errors.New(strings.ToLower(label) + " can't contain spaces")
 		}
 		return nil
 	}
@@ -34,7 +34,7 @@ func NoSpaces(label string) func(string) error {
 func NoUnderscores(label string) func(string) error {
 	return func(str string) error {
 		if strings.Contains(str, "_") {
-			return errors.New(label + " can't contain underscores")
+			return errors.New(strings.ToLower(label) + " can't contain underscores")
 		}
 		return nil
 	}
@@ -47,11 +47,11 @@ func ValidURL(label string) func(string) error {
 		cleaned := sanitize.StripHTTPPrefix(str)
 		u, err := url.ParseRequestURI("https://" + cleaned)
 		if err != nil || u.Host == "" || !strings.Contains(u.Host, ".") {
-			return errors.New(label + " must be a valid URL (e.g., github.com/user/repo)")
+			return errors.New(strings.ToLower(label) + " must be a valid URL (e.g., github.com/user/repo)")
 		}
 		parts := strings.SplitN(u.Host, ".", 2)
 		if parts[0] == "" || parts[1] == "" {
-			return errors.New(label + " must be a valid URL (e.g., github.com/user/repo)")
+			return errors.New(strings.ToLower(label) + " must be a valid URL (e.g., github.com/user/repo)")
 		}
 		return nil
 	}
@@ -62,7 +62,7 @@ func RFC5322Address(label string) func(string) error {
 	return func(str string) error {
 		addr, err := mail.ParseAddress(str)
 		if err != nil || addr.Name == "" {
-			return errors.New(label + " must be in format: Name <email@example.com>")
+			return errors.New(strings.ToLower(label) + " must be in format: Name <email@example.com>")
 		}
 		return nil
 	}

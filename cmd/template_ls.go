@@ -26,18 +26,13 @@ var templateLsCmd = &cobra.Command{
 			return
 		}
 
-		// Create tabwriter with tab-separated columns
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-
-		// Print header
 		fmt.Fprintln(w, "NAME\tDESCRIPTION\tREPO\tAUTHOR")
 
-		// Print templates
 		for name, tmpl := range templates {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", name, tmpl.Description, tmpl.RepoURL, tmpl.Author)
 		}
 
-		// Flush to ensure output is written
 		w.Flush()
 	},
 }

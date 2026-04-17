@@ -127,12 +127,11 @@ skooma brew my-app \
 
 ### Flags
 
-| Flag         | Short | Description                                    | Default      |
-| ------------ | ----- | ---------------------------------------------- | ------------ |
-| `--template` | `-t`  | Template name from configured templates        | _(prompted)_ |
-| `--repo`     | `-r`  | Repository URL (e.g. `github.com/user/repo`)   | _(prompted)_ |
-| `--author`   | `-a`  | Author name and email in `Name <email>` format | _(optional)_ |
-| `--database` | `-d`  | Database type: `file`, `mssql`, or `postgres`  | `file`       |
+| Flag         | Short | Description                                                 |
+| ------------ | ----- | ----------------------------------------------------------- |
+| `--template` | `-t`  | Template name from configured templates                     |
+| `--repo`     | `-r`  | Repository URL (e.g. `github.com/user/repo`)                |
+| `--author`   | `-a`  | Author in RFC 5322 format (e.g. `Name <email@example.com>`) |
 
 ---
 
