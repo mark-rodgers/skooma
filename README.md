@@ -144,9 +144,3 @@ skooma brew my-app \
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-<p align="center">
-  <img height="300" src="cmd/templates/frontend/public/khajiit.webp">
-</p>
