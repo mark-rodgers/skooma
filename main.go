@@ -8,9 +8,8 @@ import (
 	"github.com/skooma-cli/skooma/internal/config"
 )
 
-var version = "0.1.0-dev"
+var version = "0.2.0"
 
-// main is the entry point for the CLI application.
 func main() {
 	os.Setenv("SKOOMA_VERSION", version)
 
