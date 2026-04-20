@@ -10,7 +10,7 @@ import (
 
 // TODO: implement proper logger
 
-var version = "0.2.0"
+var version = "0.3.0"
 
 func main() {
 	os.Setenv("SKOOMA_VERSION", version)
