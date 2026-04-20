@@ -84,7 +84,6 @@ func AllowEmpty(validators ...func(string) error) func(string) error {
 // stopping at the first error.
 func All(validators ...func(string) error) func(string) error {
 	return func(str string) error {
-		// TODO: consider running all validators instead of stopping at the first error, to provide more comprehensive feedback to the user
 		for _, v := range validators {
 			if err := v(str); err != nil {
 				return err

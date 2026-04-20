@@ -119,7 +119,7 @@ var templateAddCmd = &cobra.Command{
 		template := types.Template{
 			Name:        templateAddTemplateNameArg,
 			Description: sanitize.TrimWhitespace(templateAddDescriptionFlag),
-			RepoURL:     sanitize.StripHTTPPrefix(templateAddRepoUrlFlag),
+			RepoURL:     types.ParseRepository(sanitize.StripHTTPPrefix(templateAddRepoUrlFlag)),
 			Author:      templateAddAuthorFlag,
 		}
 

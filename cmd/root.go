@@ -6,8 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// TODO: add persistent version flag to root command
-
 var rootCmd = &cobra.Command{
 	Use:   "skooma",
 	Short: "Skooma is a CLI tool to scaffold new projects with a touch of Khajiit flair.",

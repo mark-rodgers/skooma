@@ -41,7 +41,7 @@ func AddTemplate(template types.Template) error {
 	if template.Description == "" {
 		return errors.New("template description is required")
 	}
-	if template.RepoURL == "" {
+	if template.RepoURL.IsEmpty() {
 		return errors.New("template repository URL is required")
 	}
 
