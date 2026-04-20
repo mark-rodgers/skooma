@@ -9,3 +9,8 @@ func StripHTTPPrefix(str string) string {
 	str = strings.TrimPrefix(str, "http://")
 	return str
 }
+
+// TrimWhitespace removes leading and trailing whitespace from a string.
+func TrimWhitespace(str string) string {
+	return strings.TrimSpace(str)
+}
