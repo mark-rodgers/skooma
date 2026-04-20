@@ -1,7 +1,7 @@
 # 🧪 Skooma
 
 ![Release Version](https://img.shields.io/github/v/release/skooma-cli/skooma?include_prereleases)
-![Go Version](https://img.shields.io/badge/Go-1.26.1%2B-00ADD8?logo=go&logoColor=white)
+![Go Version](https://img.shields.io/badge/Go-1.26.2%2B-00ADD8?logo=go&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 > _"Khajiit has wares, if you have a project name."_
