@@ -14,7 +14,7 @@ var configCmd = &cobra.Command{
 	Long: `Open Skooma configuration file.
 This allows you to manage your templates and other settings.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := config.Open()
+		err := config.OpenConfigInEditor()
 		if err != nil {
 			fmt.Printf("Error opening config file: %v\n", err)
 			return

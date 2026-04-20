@@ -11,24 +11,25 @@ import (
 	"github.com/skooma-cli/skooma/internal/types"
 )
 
-// GetConfigPath returns the path to the Skooma config file, creating it with default config if it doesn't exist
-func GetConfigPath() (string, error) {
-	configDir, err := os.UserConfigDir()
+// Init creates the default config file and templates directory if they don't exist.
+func Init() error {
+	// Get Skooma directory, create if it doesn't exist
+	skoomaDir, err := getSkoomaDirectory()
 	if err != nil {
-		return "", err
+		return err
 	}
-
-	// Ensure the skooma config directory exists
-	skoomaDir := filepath.Join(configDir, "skooma")
 	if _, err := os.Stat(skoomaDir); os.IsNotExist(err) {
 		err = os.MkdirAll(skoomaDir, 0755)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 
-	// If config file doesn't exist, create the default config
-	configPath := filepath.Join(skoomaDir, "config.json")
+	// Get Skooma config, create if it doesn't exist
+	configPath, err := getConfigPath()
+	if err != nil {
+		return err
+	}
 	if _, err := os.Stat(configPath); err != nil {
 		// File doesn't exist, create it with default config
 		// TODO: storing the name in the key is redundant, but it makes the TUI easier to build for now. We can refactor later if needed.
@@ -46,7 +47,7 @@ func GetConfigPath() (string, error) {
 		// Write default config to file
 		file, err := os.Create(configPath)
 		if err != nil {
-			return "", err
+			return err
 		}
 		defer file.Close()
 
@@ -56,16 +57,28 @@ func GetConfigPath() (string, error) {
 
 		err = encoder.Encode(defaultConfig)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 
-	return configPath, nil
+	// Get templates directory, create if it doesn't exist
+	templatesDir, err := getTemplatesDirectory()
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(templatesDir); os.IsNotExist(err) {
+		err = os.MkdirAll(templatesDir, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // GetConfig retrieves the config object from the config file
 func GetConfig() (*types.Config, error) {
-	configPath, err := GetConfigPath()
+	configPath, err := getConfigPath()
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +99,7 @@ func GetConfig() (*types.Config, error) {
 
 // SaveConfig writes the configuration to disk.
 func SaveConfig(config *types.Config) error {
-	configPath, err := GetConfigPath()
+	configPath, err := getConfigPath()
 	if err != nil {
 		return err
 	}
@@ -109,9 +122,9 @@ func SaveConfig(config *types.Config) error {
 	return nil
 }
 
-// Open opens the configuration file in the user's default editor.
-func Open() error {
-	configPath, err := GetConfigPath()
+// OpenConfigInEditor opens the configuration file in the user's default editor.
+func OpenConfigInEditor() error {
+	configPath, err := getConfigPath()
 	if err != nil {
 		return err
 	}
@@ -133,6 +146,36 @@ func Open() error {
 	}
 
 	return cmd.Start()
+}
+
+// getSkoomaDirectory returns the path to the Skooma directory
+func getSkoomaDirectory() (string, error) {
+	userConfigDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(userConfigDir, "skooma"), nil
+}
+
+// getConfigPath returns the path to the Skooma config file
+func getConfigPath() (string, error) {
+	skoomaDir, err := getSkoomaDirectory()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(skoomaDir, "config.json"), nil
+}
+
+// getTemplatesDirectory returns the path to the Skooma templates directory
+func getTemplatesDirectory() (string, error) {
+	skoomaDir, err := getSkoomaDirectory()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(skoomaDir, "templates"), nil
 }
 
 // getEditor returns the first available editor from environment variables
