@@ -20,8 +20,9 @@ func init() {
 	templateCmd.AddCommand(templateLsCmd)
 	templateCmd.AddCommand(templateCreateCmd)
 	templateCmd.AddCommand(templateAddCmd)
-	templateAddCmd.Flags().StringVarP(&templateAddTemplate.Name, "template", "t", "", "Template name")
-	templateAddCmd.Flags().StringVarP(&templateAddTemplate.RepoURL, "repo", "r", "", "Repository URL (e.g., github.com/user/repo)")
+	templateAddCmd.Flags().StringVarP(&templateAddDescriptionFlag, "description", "d", "", "Template description")
+	templateAddCmd.Flags().StringVarP(&templateAddRepoUrlFlag, "repo", "r", "", "Repository URL (e.g., github.com/user/repo)")
+	templateAddCmd.Flags().StringVarP(&templateAddAuthorFlag, "author", "a", "", "Author name")
 
 	templateCmd.AddCommand(templateRmCmd)
 }

@@ -2,6 +2,8 @@
 package templates
 
 import (
+	"errors"
+
 	"github.com/skooma-cli/skooma/internal/config"
 	"github.com/skooma-cli/skooma/internal/types"
 )
@@ -32,13 +34,23 @@ func GetTemplateByName(name string) (*types.Template, error) {
 }
 
 // AddTemplate adds a template to the configuration and saves it.
-func AddTemplate(name string, template types.Template) error {
+func AddTemplate(template types.Template) error {
+	if template.Name == "" {
+		return errors.New("template name is required")
+	}
+	if template.Description == "" {
+		return errors.New("template description is required")
+	}
+	if template.RepoURL == "" {
+		return errors.New("template repository URL is required")
+	}
+
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
 
-	cfg.Templates[name] = template
+	cfg.Templates[template.Name] = template
 	return config.SaveConfig(cfg)
 }
 

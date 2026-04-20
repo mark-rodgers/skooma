@@ -5,8 +5,8 @@ package types
 type Template struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	Author      string `json:"author"`
 	RepoURL     string `json:"repo_url"`
+	Author      string `json:"author"`
 }
 
 // Config represents the Skooma configuration

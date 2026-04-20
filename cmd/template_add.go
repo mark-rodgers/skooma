@@ -2,62 +2,147 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"text/tabwriter"
 
 	"charm.land/huh/v2"
 	"github.com/skooma-cli/skooma/internal/sanitize"
+	"github.com/skooma-cli/skooma/internal/templates"
 	"github.com/skooma-cli/skooma/internal/types"
 	"github.com/skooma-cli/skooma/internal/validators"
 	"github.com/spf13/cobra"
 )
 
-var templateAddTemplate = types.Template{
-	Name:        "",
-	Description: "",
-	Author:      "",
-	RepoURL:     "",
-}
+var templateAddTemplateNameArg string
+var templateAddDescriptionFlag string
+var templateAddRepoUrlFlag string
+var templateAddAuthorFlag string
 
 var templateAddCmd = &cobra.Command{
-	Use:   "add",
+	Use:   "add TEMPLATE_NAME",
 	Short: "Add an existing template",
 	Long:  `Add an existing template to the available templates.`,
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-
-		form := huh.NewForm(
-			huh.NewGroup(
-				huh.NewInput().
-					Title("Template name:").
-					Value(&templateAddTemplate.Name).
-					Validate(validators.All(
-						validators.NotEmpty("Template name"),
-						validators.NoSpaces("Template name"),
-						validators.NoUnderscores("Template name"),
-					)),
-				huh.NewInput().
-					Title("Repository URL:").
-					Value(&templateAddTemplate.RepoURL).
-					Validate(validators.All(
-						validators.NotEmpty("Repository URL"),
-						validators.ValidURL("Repository URL"),
-					)),
-			),
-		)
-
-		if err := form.Run(); err != nil {
-			fmt.Printf("Error running form: %v\n", err)
-			return
+		if len(args) > 0 {
+			templateAddTemplateNameArg = args[0]
 		}
 
-		templateAddTemplate.RepoURL = sanitize.StripHTTPPrefix(templateAddTemplate.RepoURL)
+		groups := []*huh.Group{}
 
-		fmt.Printf("%+v\n", templateAddTemplate)
+		// Validators for the template name input
+		templateNameValidators := []func(string) error{
+			validators.NotEmpty("Template name"), // only meaningful in the TUI, redundant if a flag is provided 🤷
+			validators.NoSpaces("Template name"),
+			validators.NoUnderscores("Template name"),
+		}
+		// If no template name was provided, prompt the user; otherwise validate the provided value
+		if templateAddTemplateNameArg == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewInput().
+					Title("Template name:").
+					Value(&templateAddTemplateNameArg).
+					Validate(validators.All(templateNameValidators...)),
+			))
+		} else {
+			if err := validators.All(templateNameValidators...)(templateAddTemplateNameArg); err != nil {
+				log.Fatalf("❌ Invalid template name: %v\n", err)
+			}
+		}
 
-		// err := templates.AddTemplate(tmplName, template)
-		// if err != nil {
-		// 	fmt.Printf("Error adding template: %v\n", err)
-		// 	return
-		// }
+		// Validators for the description input
+		descriptionValidators := []func(string) error{
+			validators.NotEmpty("Description"),
+		}
+		// If no description was provided, prompt the user; otherwise validate the provided value
+		if templateAddDescriptionFlag == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewInput().
+					Title("Description:").
+					Value(&templateAddDescriptionFlag).
+					Validate(validators.All(descriptionValidators...)),
+			))
+		} else {
+			if err := validators.All(descriptionValidators...)(templateAddDescriptionFlag); err != nil {
+				log.Fatalf("❌ Invalid description: %v\n", err)
+			}
+		}
 
-		// fmt.Printf("Name: %s\nDescription: %s\nRepo: %s\nAuthor: %s\n", tmplName, template.Description, template.Repo, template.Author)
+		// Validators for the repository URL input
+		repoUrlValidators := []func(string) error{
+			validators.NotEmpty("Repository URL"),
+			validators.NoSpaces("Repository URL"),
+			validators.ValidURL("Repository URL"),
+		}
+		// If no repository URL was provided, prompt the user; otherwise validate the provided value
+		if templateAddRepoUrlFlag == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewInput().
+					Title("Repository URL (e.g., github.com/user/repo):").
+					Value(&templateAddRepoUrlFlag).
+					Validate(validators.All(repoUrlValidators...)),
+			))
+		} else {
+			if err := validators.All(repoUrlValidators...)(templateAddRepoUrlFlag); err != nil {
+				log.Fatalf("❌ Invalid repository URL: %v\n", err)
+			}
+		}
+
+		// Validators for the author name input
+		authorValidators := []func(string) error{
+			validators.RFC5322Address("Author"),
+		}
+		// If no author was provided, prompt the user; otherwise validate the provided value
+		if templateAddAuthorFlag == "" {
+			groups = append(groups, huh.NewGroup(
+				huh.NewInput().
+					Title("Author name (e.g., Name <email@example.com>):").
+					Value(&templateAddAuthorFlag).
+					Validate(validators.AllowEmpty(authorValidators...)),
+			))
+		} else {
+			if err := validators.All(authorValidators...)(templateAddAuthorFlag); err != nil {
+				log.Fatalf("❌ Invalid author name: %v\n", err)
+			}
+		}
+
+		form := huh.NewForm(groups...)
+
+		// Run the form to collect user input
+		err := form.Run()
+		if err != nil {
+			log.Fatalf("❌ Failed to run form: %v\n", err)
+		}
+
+		// Build project data struct to pass to the brewing process
+		template := types.Template{
+			Name:        templateAddTemplateNameArg,
+			Description: sanitize.TrimWhitespace(templateAddDescriptionFlag),
+			RepoURL:     sanitize.StripHTTPPrefix(templateAddRepoUrlFlag),
+			Author:      templateAddAuthorFlag,
+		}
+
+		// Check if template already exists before adding
+		t, err := templates.GetTemplateByName(template.Name)
+		if err == nil && t != nil {
+			log.Fatalf("❌ Template '%s' already exists\n", template.Name)
+		}
+
+		// Add the template
+		err = templates.AddTemplate(template)
+		if err != nil {
+			log.Fatalf("❌ Error adding template: %v\n", err)
+		}
+
+		fmt.Printf("\n✅ '%s' has been added successfully!\n\n", template.Name)
+
+		// Print template details
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintf(w, "Name\t%s\n", template.Name)
+		fmt.Fprintf(w, "Description\t%s\n", template.Description)
+		fmt.Fprintf(w, "Repository\t%s\n", template.RepoURL)
+		fmt.Fprintf(w, "Author\t%s\n", template.Author)
+		w.Flush()
 	},
 }
