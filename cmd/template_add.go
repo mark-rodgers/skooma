@@ -32,7 +32,7 @@ var templateAddCmd = &cobra.Command{
 		groups := []*huh.Group{}
 
 		// Validators for the template name input
-		templateNameValidators := []func(string) error{
+		templateNameValidators := []types.ValidatorFunc{
 			validators.NotEmpty("Template name"), // only meaningful in the TUI, redundant if a flag is provided 🤷
 			validators.NoSpaces("Template name"),
 			validators.NoUnderscores("Template name"),
@@ -52,7 +52,7 @@ var templateAddCmd = &cobra.Command{
 		}
 
 		// Validators for the description input
-		descriptionValidators := []func(string) error{
+		descriptionValidators := []types.ValidatorFunc{
 			validators.NotEmpty("Description"),
 		}
 		// If no description was provided, prompt the user; otherwise validate the provided value
@@ -70,7 +70,7 @@ var templateAddCmd = &cobra.Command{
 		}
 
 		// Validators for the repository URL input
-		repoUrlValidators := []func(string) error{
+		repoUrlValidators := []types.ValidatorFunc{
 			validators.NotEmpty("Repository URL"),
 			validators.NoSpaces("Repository URL"),
 			validators.ValidURL("Repository URL"),
@@ -90,7 +90,7 @@ var templateAddCmd = &cobra.Command{
 		}
 
 		// Validators for the author name input
-		authorValidators := []func(string) error{
+		authorValidators := []types.ValidatorFunc{
 			validators.RFC5322Address("Author"),
 		}
 		// If no author was provided, prompt the user; otherwise validate the provided value
@@ -129,14 +129,8 @@ var templateAddCmd = &cobra.Command{
 			log.Fatalf("❌ Template '%s' already exists\n", template.Name)
 		}
 
-		// Get template directory
-		templateDir, err := templates.GetTemplateDirectory(template)
-		if err != nil {
-			log.Fatalf("❌ Error getting template directory: %v\n", err)
-		}
-
 		// Download template from git repository
-		err = template.RepoURL.Download(templateDir)
+		err = templates.RepositoryDownload(&template)
 		if err != nil {
 			log.Fatalf("❌ Error downloading template: %v\n", err)
 		}

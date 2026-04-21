@@ -9,10 +9,62 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"charm.land/huh/v2"
 	"github.com/skooma-cli/skooma/internal/templates"
 	"github.com/skooma-cli/skooma/internal/types"
+	"github.com/skooma-cli/skooma/internal/validators"
 )
+
+func BuildTemplateVariableInputGroups(variables *[]types.TemplateConfigVariable) ([]*huh.Group, error) {
+	groups := []*huh.Group{}
+
+	for i := range *variables {
+		variable := &(*variables)[i]
+
+		// Copy the default value to the value field
+		variable.Value = variable.Default
+
+		// Resolve validators
+		validatorFns, err := validators.ResolveValidators(*variable)
+		if err != nil {
+			return nil, fmt.Errorf("error resolving validators: %w", err)
+		}
+
+		// Add appropriate input field based on variable type
+		switch variable.Type {
+		case "text":
+			// Add text input to groups
+			groups = append(groups, huh.NewGroup(
+				huh.NewInput().
+					Title(variable.Prompt).
+					Description(variable.Description).
+					Value(&variable.Value).
+					Validate(validatorFns),
+			))
+		case "select":
+			// Build options for the select input
+			options := make([]huh.Option[string], 0, len(variable.Options))
+			for _, v := range variable.Options {
+				options = append(options, huh.NewOption(v.Label, v.Value))
+			}
+			// Add select input to groups
+			groups = append(groups, huh.NewGroup(
+				huh.NewSelect[string]().
+					Title(variable.Prompt).
+					Description(variable.Description).
+					Options(options...).
+					Value(&variable.Value).
+					Validate(validatorFns),
+			))
+		default:
+			return nil, fmt.Errorf("unsupported variable type: %s", variable.Type)
+		}
+	}
+
+	return groups, nil
+}
 
 // ScaffoldProject scaffolds a new project with the given project data.
 func ScaffoldProject(project *types.ProjectData) error {
@@ -35,7 +87,7 @@ func ScaffoldProject(project *types.ProjectData) error {
 	}
 
 	// Download template repository
-	if err = project.Template.RepoURL.Download(src); err != nil {
+	if err = templates.RepositoryDownload(&project.Template); err != nil {
 		return fmt.Errorf("error downloading template: %v\n", err)
 	}
 
@@ -48,6 +100,9 @@ func ScaffoldProject(project *types.ProjectData) error {
 	if err = processTemplateFiles(src, project.Directory, *project); err != nil {
 		return fmt.Errorf("error processing template files: %w", err)
 	}
+
+	// Scaffolding is too fast, add a delay for the 'brew' effect
+	time.Sleep(1 * time.Second)
 
 	return nil
 }
@@ -64,9 +119,9 @@ func createProjectRoot(dst string) error {
 }
 
 func copyStaticFiles(src, dst string) error {
-	fmt.Println(src)
-	fmt.Println(dst)
-	fmt.Println("---------------------------------------")
+	// fmt.Println(src)
+	// fmt.Println(dst)
+	// fmt.Println("---------------------------------------")
 
 	filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -84,7 +139,7 @@ func copyStaticFiles(src, dst string) error {
 
 		// Create directory in destination directory
 		if d.IsDir() {
-			fmt.Printf("Creating directory: %s\n", dstPath)
+			// fmt.Printf("Creating directory: %s\n", dstPath)
 			if err := os.MkdirAll(dstPath, 0755); err != nil {
 				return err
 			}
@@ -102,7 +157,7 @@ func copyStaticFiles(src, dst string) error {
 			return nil
 		}
 
-		fmt.Printf("Copying file: %s\n", dstPath)
+		// fmt.Printf("Copying file: %s\n", dstPath)
 
 		// Read source file
 		in, err := os.Open(path)
@@ -130,6 +185,25 @@ func copyStaticFiles(src, dst string) error {
 }
 
 func processTemplateFiles(src, dst string, project types.ProjectData) error {
+	// Parsing variables
+	// fmt.Println("Parsing template variables...")
+
+	// Build base variables map with your hardcoded fields
+	variables := map[string]any{
+		"Name":         project.Name,
+		"RepoURL":      project.RepoURL.String(),
+		"Author":       project.Author,
+		"Directory":    project.Directory,
+		"GoModulePath": fmt.Sprintf("%s/%s/%s", project.RepoURL.Host, project.RepoURL.Owner, project.RepoURL.Name),
+	}
+
+	// Append dynamic template config variables
+	if project.Template.Config != nil {
+		for _, v := range project.Template.Config.Variables {
+			variables[v.Name] = v.Value
+		}
+	}
+
 	filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -165,8 +239,8 @@ func processTemplateFiles(src, dst string, project types.ProjectData) error {
 		defer f.Close()
 
 		// Process template file, replacing variables with project data
-		fmt.Printf("Processing template file: %s\n", dstPath)
-		if err := tmpl.Execute(f, project); err != nil {
+		// fmt.Printf("Processing template file: %s\n", dstPath)
+		if err := tmpl.Execute(f, variables); err != nil {
 			return fmt.Errorf("executing template: %w", err)
 		}
 

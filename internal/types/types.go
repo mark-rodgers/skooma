@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 )
 
@@ -18,10 +15,38 @@ type Config struct {
 
 // Template represents a project template
 type Template struct {
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	RepoURL     Repository `json:"repo_url"`
-	Author      string     `json:"author"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	RepoURL     Repository      `json:"repo_url"`
+	Author      string          `json:"author"`
+	Config      *TemplateConfig `json:"config"`
+}
+
+type TemplateConfig struct {
+	Name        string                   `json:"name"`
+	Description string                   `json:"description"`
+	Author      string                   `json:"author"`
+	Variables   []TemplateConfigVariable `json:"variables"`
+}
+
+// TemplateConfigVariable represents a variable to be filled in the template
+type TemplateConfigVariable struct {
+	Name        string                         `json:"name"`
+	Prompt      string                         `json:"prompt"`
+	Description string                         `json:"description"`
+	Type        string                         `json:"type"`
+	Required    bool                           `json:"required"`
+	Default     string                         `json:"default"`
+	Options     []TemplateConfigVariableOption `json:"options"`
+	Validators  []string                       `json:"validators"` // e.g. ["not_empty", "no_spaces"]
+	Value       string                         `json:"-"`          // resolved at runtime, not from JSON
+}
+
+// Option represents an option for a select variable
+type TemplateConfigVariableOption struct {
+	Value       string `json:"value"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
 }
 
 // Repository represents a git repository (e.g., "github.com/owner/repo")
@@ -133,37 +158,5 @@ func ParseRepository(s string) Repository {
 	return r
 }
 
-// Download clones the repository to the specified destination
-func (r Repository) Download(dest string) error {
-	fmt.Println("---------------------------------------------------------")
-	fmt.Printf("Downloading template from %s\n", r.String())
-	fmt.Printf("Destination: %s\n", dest)
-	fmt.Println("---------------------------------------------------------")
-
-	if _, err := os.Stat(dest); !os.IsNotExist(err) {
-		fmt.Printf("Directory %s already exists, skipping download.\n", dest)
-		return nil
-	}
-
-	cloneURL := r.String()
-	// Strip the @ref from the clone URL if it exists
-	if idx := strings.LastIndex(cloneURL, "@"); idx != -1 {
-		cloneURL = cloneURL[:idx]
-	}
-
-	args := []string{"clone", "--depth=1"}
-	if r.Ref != "" && r.Ref != "latest" {
-		args = append(args, "--branch", r.Ref)
-	}
-	args = append(args, cloneURL, dest)
-
-	cmd := exec.Command("git", args...)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return os.RemoveAll(filepath.Join(dest, ".git"))
-}
+// ValidatorFunc is the inner validation function.
+type ValidatorFunc func(string) error

@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 	"text/tabwriter"
+	"time"
 
 	"charm.land/huh/v2"
-	// "github.com/briandowns/spinner"
+	"github.com/briandowns/spinner"
 	"github.com/skooma-cli/skooma/internal/brew"
 	"github.com/skooma-cli/skooma/internal/sanitize"
 	"github.com/skooma-cli/skooma/internal/templates"
@@ -39,7 +40,7 @@ the necessary files for a basic project structure.`,
 		groups := []*huh.Group{}
 
 		// Validators for the project name input
-		projectNameValidators := []func(string) error{
+		projectNameValidators := []types.ValidatorFunc{
 			validators.NotEmpty("Project name"), // only meaningful in the TUI, redundant if a flag is provided 🤷
 			validators.NoSpaces("Project name"),
 			validators.NoUnderscores("Project name"),
@@ -59,15 +60,15 @@ the necessary files for a basic project structure.`,
 		}
 
 		// Load templates to build options for the template selection prompt
-		templates, err := templates.GetTemplates()
+		tpls, err := templates.GetTemplates()
 		if err != nil {
 			log.Fatalf("❌ Error loading templates: %v\n", err)
 		}
 
 		// If no template was provided, prompt the user; otherwise validate the provided template name exists
 		if brewTemplateFlag == "" {
-			templateOptions := make([]huh.Option[string], 0, len(templates))
-			for name, tmpl := range templates {
+			templateOptions := make([]huh.Option[string], 0, len(tpls))
+			for name, tmpl := range tpls {
 				templateOptions = append(templateOptions, huh.NewOption(name+" - "+tmpl.Description, name))
 			}
 			groups = append(groups, huh.NewGroup(
@@ -76,12 +77,12 @@ the necessary files for a basic project structure.`,
 					Options(templateOptions...).
 					Value(&brewTemplateFlag),
 			))
-		} else if _, ok := templates[brewTemplateFlag]; !ok {
+		} else if _, ok := tpls[brewTemplateFlag]; !ok {
 			log.Fatalf("❌ Invalid template name: '%s'. Use 'skooma template ls' to see available templates.\n", brewTemplateFlag)
 		}
 
 		// Validators for the repository URL input
-		repoUrlValidators := []func(string) error{
+		repoUrlValidators := []types.ValidatorFunc{
 			validators.NoSpaces("Repository URL"),
 			validators.ValidURL("Repository URL"),
 		}
@@ -100,7 +101,7 @@ the necessary files for a basic project structure.`,
 		}
 
 		// Validators for the author name input
-		authorValidators := []func(string) error{
+		authorValidators := []types.ValidatorFunc{
 			validators.RFC5322Address("Author"),
 		}
 		// If no author was provided, prompt the user; otherwise validate the provided value
@@ -125,18 +126,36 @@ the necessary files for a basic project structure.`,
 			log.Fatalf("❌ Failed to run form: %v\n", err)
 		}
 
+		template, err := templates.GetTemplateByName(brewTemplateFlag)
+		if err != nil {
+			log.Fatalf("❌ Failed to get template: %v\n", err)
+		}
+
+		templateGroups, err := brew.BuildTemplateVariableInputGroups(&template.Config.Variables)
+		if err != nil {
+			log.Fatalf("❌ Failed to build template variable input groups: %v\n", err)
+		}
+
+		if len(templateGroups) > 0 {
+			form = huh.NewForm(templateGroups...)
+			err = form.Run()
+			if err != nil {
+				log.Fatalf("❌ Failed to run form: %v\n", err)
+			}
+		}
+
 		// Build project data struct to pass to the brewing process
 		project := types.ProjectData{
 			Name:     brewProjectNameArg,
-			Template: templates[brewTemplateFlag],
+			Template: *template,
 			RepoURL:  types.ParseRepository(sanitize.StripHTTPPrefix(brewRepoUrlFlag)),
 			Author:   brewAuthorFlag,
 		}
 
 		// // Start brewing spinner
-		// s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-		// s.Suffix = " Brewing..."
-		// s.Start()
+		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+		s.Suffix = " Brewing..."
+		s.Start()
 
 		// Brew project
 		err = brew.ScaffoldProject(&project)
@@ -145,7 +164,7 @@ the necessary files for a basic project structure.`,
 		}
 
 		// Stop spinner and print success message
-		// s.Stop()
+		s.Stop()
 		fmt.Printf("\n✅ '%s' has finished brewing!\n\n", project.Name)
 
 		// Print project details
@@ -153,7 +172,15 @@ the necessary files for a basic project structure.`,
 		fmt.Fprintf(w, "Template\t%s - %s\n", project.Template.Name, project.Template.Description)
 		fmt.Fprintf(w, "Repository\t%s\n", project.RepoURL)
 		fmt.Fprintf(w, "Author\t%s\n", project.Author)
+
+		// Print template variables
+		for _, v := range project.Template.Config.Variables {
+			fmt.Fprintf(w, "%s\t%s\n\n", v.Name, v.Value)
+		}
+
+		// Print project directory
 		fmt.Fprintf(w, "Directory\t%s\n", project.Directory)
+
 		w.Flush()
 	},
 }
